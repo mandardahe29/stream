@@ -83,21 +83,24 @@ def capture_page(folder):
 # ------------------------------------------------------------------------
 # Page: Gallery
 # ------------------------------------------------------------------------
-def gallery_page():
+def gallery_page(folder=None):
     """
-    Page to view images in any subfolder of the current directory.
+    Page to view images in a specific folder if provided,
+    or allow selection of any subfolder of the current directory.
     """
     st.header("Gallery")
-
-    # List all subfolders in the current directory
-    folders = list_subfolders(".")
     
-    if not folders:
-        st.write("No folders found. Try capturing an image first!")
-        return
-    
-    # Let the user pick which folder to view
-    selected_folder = st.selectbox("Select a folder to view images:", folders)
+    if folder is None:
+        # List all subfolders in the current directory
+        folders = list_subfolders(".")
+        if not folders:
+            st.write("No folders found. Try capturing an image first!")
+            return
+        
+        # Let the user pick which folder to view
+        selected_folder = st.selectbox("Select a folder to view images:", folders)
+    else:
+        selected_folder = folder
     
     # Show the images in the selected folder
     image_files = list_image_files(selected_folder)
