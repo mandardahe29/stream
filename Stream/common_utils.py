@@ -1,3 +1,5 @@
+# common_utils.py
+
 import streamlit as st
 import os
 import datetime
@@ -49,7 +51,7 @@ def list_image_files(folder):
 def capture_page(folder):
     """
     Page to capture multiple images using the camera
-    and save them to `folder`.
+    and save them to folder.
     """
     st.header("Capture Images")
     st.write(f"Images will be saved in: **{folder}**")
@@ -106,4 +108,3 @@ def gallery_page():
             st.image(str(full_path), caption=img_file, use_column_width=True)
     else:
         st.write(f"No images found in **{selected_folder}**.")
-
