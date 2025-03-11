@@ -89,11 +89,11 @@ def impact_test_page():
     st.write("**Current Table Data:**", st.session_state["impact_table_data"])
 
     nav_options = ["Capture", "Gallery"]
-        selection = st.radio("Navigation", nav_options, horizontal=True)
+    selection = st.radio("Navigation", nav_options, horizontal=True)
     
-        if selection == "Capture":
-            capture_page("impact_images")
-        else:
-            gallery_page("impact_images")
+     if selection == "Capture":
+        capture_page("impact_images")
+     else:
+        gallery_page("impact_images")
 
 
