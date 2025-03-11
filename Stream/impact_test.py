@@ -92,8 +92,8 @@ def impact_test_page():
     selection = st.radio("Navigation", nav_options, horizontal=True)
     
      if selection == "Capture":
-        capture_page("impact_images")
+         capture_page("impact_images")
      else:
-        gallery_page("impact_images")
+         gallery_page("impact_images")
 
 
