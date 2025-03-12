@@ -6,8 +6,8 @@ from rdt_test import rdt_test_page
 from axial_test import axial_test_page
 
 def main():
-     st.title("Test Selection")
-
+    st.title("Test Selection")
+    st.write(f"Streamlit Version: {st.__version__}")
     test_options = [
         "Impact Test",
         "CFT Test",
@@ -27,6 +27,6 @@ def main():
         rdt_test_page()
     elif choice == "Axial Test":
         axial_test_page()
-    st.write(f"Streamlit Version: {st.__version__}")
+    
 if __name__ == '__main__':
     main()
