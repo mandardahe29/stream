@@ -4,10 +4,9 @@ from cft_test import cft_test_page
 from tft_test import tft_test_page
 from rdt_test import rdt_test_page
 from axial_test import axial_test_page
-
+st.write(f"Streamlit Version: {st.__version__}")
 def main():
     st.title("Test Selection")
-    st.write(f"Streamlit Version: {st.__version__}")
     test_options = [
         "Impact Test",
         "CFT Test",
