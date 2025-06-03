@@ -1,159 +1,105 @@
+# impact_test.py
 import streamlit as st
-from common_utils import capture_page, gallery_page
-import os
-import datetime
-from pathlib import Path
 import pandas as pd
-from openpyxl import Workbook
-from openpyxl.drawing.image import Image as OpenpyxlImage
+from openpyxl import load_workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.utils.dataframe import dataframe_to_rows
+from PIL import Image
+import io
+import os
 
+EXCEL_FILE = "impact_test_data.xlsx"
 
-# Helper function to generate Excel file with table data and images.
-def save_test_results_to_excel(test_name, table_data, image_folder, output_filename):
-    wb = Workbook()
-    
-    # Create first sheet for table data.
-    ws_data = wb.active
-    ws_data.title = f"{test_name} Data"
-    
-    if table_data:
-        # Write header row from table_data keys.
-        header = list(table_data[0].keys())
-        ws_data.append(header)
-        # Write each row of data.
-        for row in table_data:
-            ws_data.append(list(row.values()))
-    
-    # Create second sheet for images.
-    ws_img = wb.create_sheet(title=f"{test_name} Images")
-    row_pos = 1  # Starting row for images.
-    if os.path.exists(image_folder):
-        for file in os.listdir(image_folder):
-            if file.lower().endswith((".png", ".jpg", ".jpeg", ".gif")):
-                img_path = os.path.join(image_folder, file)
-                try:
-                    img = OpenpyxlImage(img_path)
-                    # Add the image to the sheet at column A.
-                    cell_address = f"A{row_pos}"
-                    ws_img.add_image(img, cell_address)
-                    row_pos += 20  # Adjust spacing for each image.
-                except Exception as e:
-                    st.error(f"Error adding image {file}: {e}")
+def save_data_to_excel(data: dict, img_file):
+    df = pd.DataFrame([data])
+    if not os.path.exists(EXCEL_FILE):
+        df.to_excel(EXCEL_FILE, sheet_name="Impact Data", index=False)
     else:
-        ws_img.append(["No image folder found"])
-    
-    # Save the workbook to the given output filename.
-    wb.save(output_filename)
-    return output_filename
+        with pd.ExcelWriter(EXCEL_FILE, mode="a", if_sheet_exists="overlay", engine="openpyxl") as writer:
+            reader = pd.read_excel(EXCEL_FILE, sheet_name="Impact Data")
+            df = pd.concat([reader, df], ignore_index=True)
+            df.to_excel(writer, sheet_name="Impact Data", index=False)
 
-    
+    if img_file:
+        wb = load_workbook(EXCEL_FILE)
+        sheet_name = f"Image_{data['Test Request No']}"
+        if sheet_name in wb.sheetnames:
+            del wb[sheet_name]
+        ws = wb.create_sheet(title=sheet_name)
+        image = Image.open(img_file)
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        img_bytes = buf.getvalue()
+        img = XLImage(io.BytesIO(img_bytes))
+        img.width = 500
+        img.height = 300
+        ws.add_image(img, "A1")
+        wb.save(EXCEL_FILE)
+
 def impact_test_page():
-    st.header("Impact Test")
+    st.header("Impact Test Form")
 
-    # Optional headings above the table
-    st.markdown("""
-    **Before test run out measurement**  
-    FRONT WHEEL RIM  
+    with st.form("impact_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            part_no = st.text_input("Part No.")
+            part_name = st.text_input("Part Name")
+            model = st.text_input("Model")
+            requested_by = st.text_input("Requested By")
+        with col2:
+            test_request_no = st.text_input("Test Request No")
+            test_standard = st.text_input("Test Standard")
+            test_start_date = st.date_input("Test Start Date")
+            test_name = st.text_input("Test Name")
 
-    **Specification**: Run out = 0.5 max
-    """)
+        st.subheader("Rim Details")
+        rim_make = st.text_input("Rim Make")
+        rim_size = st.text_input("Rim Size")
+        rim_type = st.text_input("Rim Type")
+        rim_radius = st.text_input("Static Wheel Radius (mm)")
 
-    # 1) Editable label (e.g., "Endurance")
-    if "endurance_label" not in st.session_state:
-        st.session_state["endurance_label"] = "Endurance"
-    st.session_state["endurance_label"] = st.text_input(
-        "Test Label:", 
-        value=st.session_state["endurance_label"]
-    )
+        st.subheader("Tyre Details")
+        tyre_make = st.text_input("Tyre Make")
+        tyre_size = st.text_input("Tyre Size")
+        max_load = st.text_input("Max Load Capacity of Tyre (Kg)")
+        tyre_pressure = st.text_input("Tyre Air Pressure (KPa)")
 
-    st.markdown(f"### {st.session_state['endurance_label']}")
+        st.subheader("Impact Conditions")
+        front = st.checkbox("Front")
+        rear = st.checkbox("Rear")
+        impact_load = st.text_input("Impact Load (Kg)")
+        impact_height = st.text_input("Impact Height (mm)")
+        striker_type = st.selectbox("Impact Test Striker", ["Standard", "Step"])
+        location = st.multiselect("Impact Locations", ["On Spoke", "Between Spoke", "On Valve Hole"])
 
-    # 2) Initialize table data in session_state if it doesn't exist
-    if "impact_table_data" not in st.session_state:
-        st.session_state["impact_table_data"] = [
-            {
-                "Sample No": "S1_200",
-                "Axial (Disc Side)": "",
-                "Axial (Opposite Side)": "",
-                "Radial (Disc Side)": "",
-                "Radial (Opposite Side)": ""
-            },
-            {
-                "Sample No": "S2_200",
-                "Axial (Disc Side)": "",
-                "Axial (Opposite Side)": "",
-                "Radial (Disc Side)": "",
-                "Radial (Opposite Side)": ""
-            },
-            # Add more default rows if you want:
-            # {
-            #     "Sample No": "S3_400",
-            #     "Axial (Disc Side)": "",
-            #     "Axial (Opposite Side)": "",
-            #     "Radial (Disc Side)": "",
-            #     "Radial (Opposite Side)": ""
-            # },
-            # {
-            #     "Sample No": "S4_400",
-            #     "Axial (Disc Side)": "",
-            #     "Axial (Opposite Side)": "",
-            #     "Radial (Disc Side)": "",
-            #     "Radial (Opposite Side)": ""
-            # },
-        ]
+        image = st.file_uploader("Upload Impact Test Image", type=["png", "jpg", "jpeg"])
+        submit = st.form_submit_button("Submit")
 
-    # 3) Show the editable table (data_editor)
-    edited_data = st.data_editor(
-        st.session_state["impact_table_data"],
-        key="impact_editor",
-        column_config={ 
-            "Sample No": st.column_config.TextColumn("Sample No"),
-            "Axial Run Out (Disc Side)": st.column_config.NumberColumn("Axial Run Out (Disc Side)"),
-            "Axial Run Out (Opposite Side)": st.column_config.NumberColumn("Axial Run Out (Opposite Side)"),
-            "Radial (Disc Side)": st.column_config.NumberColumn("Radial (Disc Side)"),
-            "Radial (Opposite Side)": st.column_config.NumberColumn("Radial (Opposite Side)")
-        }
-    )
+        if submit:
+            data = {
+                "Part No.": part_no,
+                "Part Name": part_name,
+                "Model": model,
+                "Requested By": requested_by,
+                "Test Request No": test_request_no,
+                "Test Standard": test_standard,
+                "Test Start Date": test_start_date,
+                "Test Name": test_name,
+                "Rim Make": rim_make,
+                "Rim Size": rim_size,
+                "Rim Type": rim_type,
+                "Static Wheel Radius": rim_radius,
+                "Tyre Make": tyre_make,
+                "Tyre Size": tyre_size,
+                "Tyre Max Load": max_load,
+                "Tyre Pressure": tyre_pressure,
+                "Front": front,
+                "Rear": rear,
+                "Impact Load": impact_load,
+                "Impact Height": impact_height,
+                "Striker Type": striker_type,
+                "Locations": ", ".join(location)
+            }
 
-    # Update session_state with any user edits
-    st.session_state["impact_table_data"] = edited_data
-
-    # 4) Button to add a new row
-    if st.button("Add New Row"):
-        next_idx = len(st.session_state["impact_table_data"]) + 1
-        new_row = {
-            "Sample No": f"S{next_idx}_200",
-            "Axial (Disc Side)": "",
-            "Axial (Opposite Side)": "",
-            "Radial (Disc Side)": "",
-            "Radial (Opposite Side)": ""
-        }
-        st.session_state["impact_table_data"].append(new_row)
-
-
-    # Section: Save results to Excel.
-    st.markdown("### Save Test Results")
-    if st.button("Save Test Results to Excel"):
-        # Define the folder where images are stored for Impact Test.
-        image_folder = "impact_images"
-        # Create the folder if it doesn't exist (images would be saved here by your capture code).
-        if not os.path.exists(image_folder):
-            os.makedirs(image_folder)
-        # Generate an Excel file.
-        excel_filename = f"impact_test_results_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        output_file = save_test_results_to_excel("Impact Test", st.session_state["impact_table_data"], image_folder, excel_filename)
-        # Provide a download button for the generated Excel file.
-        with open(output_file, "rb") as f:
-            st.download_button("Download Excel File", f, file_name=excel_filename)
-        st.success("Test results saved and ready for download.")
-    # Display the table data for debugging (optional)
-    #st.write("Current Table Data:", st.session_state["impact_table_data"])
-
-    nav_options = ["Capture", "Gallery"]
-    selection = st.radio("Navigation", nav_options, horizontal=True)
-
-    if selection == "Capture":
-        capture_page("impact_images")
-    else:
-        gallery_page("impact_images")
-
+            save_data_to_excel(data, image)
+            st.success("Data and image saved successfully!")
